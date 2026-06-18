@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Google Cloud credentials
+*.json
+application_default_credentials.json
+adc.json
+credentials.json
+client_secret*.json
+service-account*.json
+service_account*.json
+gcloud/
+.config/gcloud/
+
+# API keys / tokens
+*.key
+*.pem
+*.p12
+*.crt
+*.token
+*.secret
+
+# ADK / local runtime files
+.adk/
+.sessions/
+tmp/
+temp/
+
+# BigQuery / exported data
+*.csv
+*.xlsx
+*.parquet
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Node.js, if MCP server uses npm/node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Build / cache
+dist/
+build/
+*.egg-info/
+
+# Local output files
+outputs/
+results/
+reports/
