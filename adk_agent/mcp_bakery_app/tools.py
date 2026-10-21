@@ -24,6 +24,7 @@ def get_bigquery_mcp_toolset():
         scopes=["https://www.googleapis.com/auth/bigquery"]
     )
     credentials.refresh(google.auth.transport.requests.Request())
+    project_id = project_id or os.getenv("GOOGLE_CLOUD_PROJECT", "mcp1234567")
     headers = {
         "Authorization": f"Bearer {credentials.token}",
         "x-goog-user-project": project_id,
@@ -49,6 +50,7 @@ def get_osm_mcp_toolset():
     args = ["--with", "mcp<2", "osm-mcp-server"] if command == "uvx" else []
     return McpToolset(
         connection_params=StdioConnectionParams(
-            server_params=StdioServerParameters(command=command, args=args)
+            server_params=StdioServerParameters(command=command, args=args),
+            timeout=30.0,
         )
     )

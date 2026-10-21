@@ -1,8 +1,12 @@
+import copy
+import logging
 import os
+from typing import AsyncGenerator
 
 import dotenv
 from google.adk.agents import LlmAgent
-from google.genai import types
+from google.adk.models import BaseLlm, LlmRequest, LlmResponse
+from google.adk.models.google_llm import Gemini
 
 from mcp_bakery_app import tools
 from mcp_bakery_app.scoring import rank_locations
@@ -10,7 +14,45 @@ from mcp_bakery_app.scoring import rank_locations
 dotenv.load_dotenv()
 
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "mcp1234567")
-MODEL = os.getenv("MODEL_NAME", "gemini-3.8-flash")
+DEFAULT_MODEL = os.getenv("MODEL_NAME", "gemini-3.8-flash")
+FALLBACK_MODELS = [
+    DEFAULT_MODEL,
+    "gemini-3.6-flash",
+    "gemini-3.1-flash-lite",
+]
+# Ensure no duplicates while preserving order
+FALLBACK_MODELS = list(dict.fromkeys(FALLBACK_MODELS))
+
+logger = logging.getLogger("mcp_bakery_app.fallback")
+
+
+class FallbackGemini(BaseLlm):
+    """LLM wrapper that automatically falls back to alternative Free Tier models
+    if the primary model hits rate limits (429) or high demand spikes (503).
+    """
+
+    model: str = DEFAULT_MODEL
+    fallback_models: list[str] = FALLBACK_MODELS
+
+    async def generate_content_async(
+        self, llm_request: LlmRequest, stream: bool = False
+    ) -> AsyncGenerator[LlmResponse, None]:
+        last_err = None
+        for m in self.fallback_models:
+            try:
+                req = copy.copy(llm_request)
+                req.model = m
+                llm = Gemini(model=m)
+                async for resp in llm.generate_content_async(req, stream=stream):
+                    yield resp
+                return
+            except Exception as e:
+                last_err = e
+                logger.warning(
+                    f"[Fallback] Model {m} gagal ({e}), mencoba model berikutnya..."
+                )
+        raise last_err
+
 
 INSTRUCTION = f"""
 Kamu adalah analis lokasi untuk jaringan toko roti yang akan membuka cabang
@@ -41,7 +83,7 @@ ATURAN WAJIB:
 """
 
 root_agent = LlmAgent(
-    model=MODEL,
+    model=FallbackGemini(),
     name="location_intelligence_agent",
     instruction=INSTRUCTION,
     tools=[
@@ -49,9 +91,4 @@ root_agent = LlmAgent(
         tools.get_osm_mcp_toolset(),
         rank_locations,
     ],
-    generate_content_config=types.GenerateContentConfig(
-        http_options=types.HttpOptions(
-            retry_options=types.RetryOptions(attempts=3)
-        )
-    ),
 )

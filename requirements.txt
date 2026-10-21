@@ -8,3 +8,4 @@ numpy
 pyarrow
 db-dtypes
 mcp
+aiohttp
