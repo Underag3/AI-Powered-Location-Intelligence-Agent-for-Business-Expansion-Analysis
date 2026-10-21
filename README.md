@@ -1,320 +1,303 @@
 # AI-Powered Location Intelligence Agent for Business Expansion Analysis
 
-An AI-powered location intelligence agent built using **Google Agent Development Kit (ADK)**, **Model Context Protocol (MCP)**, **BigQuery**, and **Google Maps**.  
-This project demonstrates how an AI agent can combine structured business data and real-world location data to support data-driven business expansion decisions.
+An AI-powered location intelligence agent built using **Google Agent Development Kit (ADK)**, **Model Context Protocol (MCP)**, **BigQuery Sandbox**, and **OpenStreetMap (OSM)**.  
+This project demonstrates how an autonomous AI agent can combine structured enterprise data with real-world geospatial intelligence to support data-driven retail expansion decisions—completely free of charge (**Rp0 / Zero Billing**).
 
-## Overview
+---
 
-Choosing the right business location requires more than intuition. Businesses need to consider customer demographics, foot traffic, competitor density, sales potential, pricing strategy, and accessibility.
+## 📌 Background & Context
 
-This project builds an AI agent that can analyze business expansion opportunities by connecting to:
+This project originated from the author's participation in the **Google Cloud Gen AI Academy APAC** program, building upon and extending the official academy materials.
 
-- **BigQuery** for structured business and demographic data
-- **Google Maps MCP Server** for real-world location intelligence
-- **Google ADK** for building and running the AI agent
-- **Gemini** as the reasoning model behind the agent
+The initial codelab implementation depended on Vertex AI, Google Maps Platform APIs, and Google Cloud Storage (GCS) buckets, which strictly require active Google Cloud billing. To ensure this project is fully reproducible, educational, and cost-free, the architecture was re-engineered:
+- **Zero-Billing Architecture**: Runs BigQuery in **Sandbox Mode** (free 10 GB storage and 1 TiB query/month, without requiring a credit card or active billing).
+- **OpenStreetMap MCP Server**: Replaced Google Maps Platform with the open-source `osm-mcp-server` executed via `uvx`, providing geocoding, POI discovery, and routing over standard stdio without requiring any API keys.
+- **Deterministic Scoring Engine (`scoring.py`)**: Replaced probabilistic LLM guessing with a mathematically grounded Python scoring function (`rank_locations`), preventing AI hallucinations.
+- **Multi-Model Resilient Fallback**: Designed a dynamic fallback wrapper across Google AI Studio Free Tier models (`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.1-flash-lite`) to guarantee zero downtime during peak demand (503) or daily rate limits (429).
 
-The agent can help answer questions such as:
+---
 
-- Which area has the strongest potential for business expansion?
-- Which ZIP code or district has high foot traffic?
-- How competitive is a specific location?
-- What nearby competitors exist around a target area?
-- Is the location accessible and suitable for business operations?
-- What recommendation can be made based on data and map-based context?
-
-## Project Purpose
-
-The purpose of this project is to demonstrate how an AI agent can support **business expansion analysis** by combining multiple data sources and external tools.
-
-Instead of only generating responses from a language model, the agent can use tools to retrieve, analyze, and validate information before giving a recommendation.
-
-This project is suitable for showcasing skills in:
-
-- AI Agent development
-- Google ADK
-- MCP tool integration
-- BigQuery-based analytics
-- Google Maps / location intelligence
-- Business data analysis
-- Cloud-based AI workflow
-
-## Tech Stack
-
-| Technology | Purpose |
-|---|---|
-| Google ADK | Framework for building the AI agent |
-| Gemini | Large language model used by the agent |
-| MCP | Tool connection protocol for external services |
-| BigQuery | Data warehouse for structured business data |
-| Google Maps MCP | Location search, competitor analysis, and route context |
-| Python | Main programming language |
-| Google Cloud | Cloud environment and authentication |
-| Shell Script | Setup and cleanup automation |
-
-## Project Architecture
+## 🏗️ System Architecture
 
 ```text
-User
- |
- | asks business location questions
- v
-Google ADK Agent
- |
- | decides which tool to use
- |
- +------------------------+
- |                        |
- v                        v
-BigQuery MCP Server       Google Maps MCP Server
- |                        |
- | structured data         | real-world location data
- | demographics            | competitors
- | sales history           | nearby places
- | pricing                 | accessibility
- | foot traffic            | route context
- v                        v
-Combined Analysis and Recommendation
-
-
+                           +---------------------------+
+                           |           User            |
+                           +-------------+-------------+
+                                         |
+                                         v asks location questions
+                       +-----------------------------------+
+                       |    Google ADK Root Agent          |
+                       | (Multi-Model Resilient Fallback)  |
+                       |    - gemini-3.8-flash (Primary)   |
+                       |    - gemini-3.6-flash (Fallback)  |
+                       |    - gemini-3.1-flash-lite        |
+                       +-----------------+-----------------+
+                                         |
+                                         | decides tool execution
+            +----------------------------+----------------------------+
+            |                            |                            |
+            v                            v                            v
++-----------------------+   +-------------------------+   +-------------------------+
+| BigQuery MCP Server   |   | OpenStreetMap MCP       |   | Deterministic Scoring   |
+| (Remote HTTP Stream)  |   | (Local stdio / uvx)     |   | Engine (scoring.py)     |
+| URL: bigquery.goog... |   | osm-mcp-server          |   | rank_locations()        |
++-----------+-----------+   +------------+------------+   +------------+------------+
+            |                            |                             |
+            | Demographics, Traffic,     | Real-world Places,          | Strict Multi-Factor   |
+            | Prices, Weekly Sales       | Competitors, Routes         | Mathematical Ranking  |
+            v                            v                             v
++-----------------------------------------------------------------------------------+
+|                        Integrated Business Recommendation                         |
++-----------------------------------------------------------------------------------+
 ```
 
-## Repository Structure
+---
 
-```
+## 🛠️ Tech Stack
+
+| Technology | Purpose | Cost / Tier |
+|---|---|---|
+| **Google ADK (Agent Development Kit)** | Framework for orchestrating the multi-tool AI agent | Open Source |
+| **Google AI Studio (Gemini)** | LLM reasoning engine with dynamic model failover | Free Tier (Rp0) |
+| **Model Context Protocol (MCP)** | Open standard protocol connecting LLM to external data tools | Open Standard |
+| **BigQuery MCP Server** | Remote MCP server querying structured business data | Sandbox Mode (Rp0) |
+| **OpenStreetMap MCP Server** | Local stdio MCP server for geocoding, POIs, and route calculation | Open Source (Rp0) |
+| **Python & Pandas** | Deterministic ranking engine (`rank_locations`) & data loading | Open Source |
+
+---
+
+## 📁 Repository Structure
+
+```text
+AI-Powered-Location-Intelligence-Agent-for-Business-Expansion-Analysis/
+├── .gitignore                          # Ignores credentials, .env, and local venvs
+├── README.md                           # Comprehensive documentation & evaluation results
+├── requirements.txt                    # All required production dependencies
+├── .env.example                        # Template for environment configuration
+├── architecture_diagram.png            # Visual architecture overview
 ├── adk_agent/
 │   └── mcp_bakery_app/
-│       ├── __init__.py
-│       ├── agent.py
-│       └── tools.py
-│
-├── cleanup/
-│   └── cleanup_env.sh
-│
-├── data/
-│   └── .gitkeep
-│
-├── setup/
-│   ├── setup_bigquery.sh
-│   └── setup_env.sh
-│
-├── architecture_diagram.png
-├── requirements.txt
-├── .gitignore
-└── README.md
+│       ├── __init__.py                 # Package initializer
+│       ├── agent.py                    # Root agent with FallbackGemini & anti-hallucination prompt
+│       ├── tools.py                    # BigQuery MCP and OpenStreetMap MCP configuration
+│       └── scoring.py                  # Deterministic ranking engine (rank_locations)
+├── data/                               # Ground-truth datasets (California & Los Angeles)
+│   ├── demographics.csv                # 305 ZIP codes: population, age, education, foot traffic index
+│   ├── foot_traffic.csv                # 915 rows: foot traffic scores by time of day
+│   ├── bakery_prices.csv               # 50 rows: competitor pricing across bakery categories
+│   └── sales_history_weekly.csv        # 936 rows: historical weekly sales across 3 branch locations
+└── setup/
+    ├── load_data_sandbox.py            # Automated BigQuery Sandbox dataset creation & CSV loader
+    ├── load_data_sandbox.sh            # Shell script for loading data (Linux/macOS)
+    ├── load_data_sandbox.ps1           # PowerShell script for loading data (Windows)
+    ├── setup_env.sh                    # [LEGACY] Original GCP codelab setup (requires billing)
+    └── setup_bigquery.sh               # [LEGACY] Original GCS-to-BQ setup (requires billing)
 ```
 
-## Main Features
-1. AI Agent for Business Expansion
+> [!NOTE]
+> The scripts `setup/setup_env.sh` and `setup/setup_bigquery.sh` are preserved as **legacy files** from the original Google Cloud codelab. They assume Google Maps Platform API keys and Cloud Storage buckets which require active Google Cloud billing. For the free-tier Sandbox workflow, use `setup/load_data_sandbox.py` (or `.sh` / `.ps1`).
 
-The agent is designed to assist users in analyzing potential business locations. It can reason through business questions and combine multiple sources of information before giving a recommendation.
+---
 
-2. BigQuery Integration
+## 📊 Deterministic Location Scoring Logic (`scoring.py`)
 
-The agent uses BigQuery to access structured data such as:
+To eliminate LLM hallucinations when evaluating expansion targets, the agent uses a mathematically locked multi-factor scoring formula:
 
-Demographic data
-Foot traffic data
-Historical sales data
-Pricing data
-Area-level business indicators
-3. Google Maps Integration
+$$\text{Total Score} = 0.40 \times \text{Traffic Score} + 0.35 \times \text{Market Score} + 0.25 \times \text{Purchasing Score}$$
 
-The agent uses Google Maps through MCP to analyze real-world location context, such as:
+### Score Components:
+1. **Traffic Score (40%)**:
+   $$\text{traffic\_raw} = 0.5 \times \text{avg\_ft} + 0.5 \times \text{foot\_traffic\_index}$$
+   Combined average morning/afternoon/evening foot traffic scores with area mobility index, scaled via Min-Max ($0 - 100$).
+2. **Market Score (35%)**:
+   $$\text{market\_raw} = \text{total\_population}$$
+   Total population count within the ZIP code, scaled via Min-Max ($0 - 100$).
+3. **Purchasing Score (25%)**:
+   $$\text{purchasing\_raw} = \text{bachelors\_degree\_pct}$$
+   Percentage of population aged 25+ with a bachelor's degree or higher (proxy for artisanal bakery purchasing power), scaled via Min-Max ($0 - 100$).
+4. **Competitor Handling**:
+   Competitor pricing data is aggregated at the regional level (LA Metro, Bay Area), not by physical radius. Therefore, competitor presence is **excluded from the numeric formula** and validated separately via OpenStreetMap MCP (`find_nearby_places`).
 
-Nearby competitors
-Nearby points of interest
-Accessibility
-Distance and route information
-Location suitability
-4. MCP-Based Tool Calling
+---
 
-This project demonstrates how MCP can be used to connect an AI agent with external tools. The agent does not work as a simple chatbot; it can use tools to retrieve information and support its reasoning.
+## 🚀 Setup & Execution Guide
 
-## Example Use Case
+### 1. Prerequisites
+- **Python 3.10 to 3.13** installed.
+- **`uv` package manager**:
+  - Windows: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
+  - macOS / Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- **Google Cloud Application Default Credentials (ADC)**:
+  Run `gcloud auth application-default login` on your machine (or copy `~/.config/gcloud/application_default_credentials.json` from Cloud Shell to `%APPDATA%\gcloud\application_default_credentials.json`).
 
-A business owner wants to open a new branch in a specific city or area. The agent can help compare possible locations by analyzing:
-
-Customer potential
-Foot traffic
-Competitor presence
-Historical sales patterns
-Pricing opportunity
-Accessibility and surrounding area
-
-Example user question:
-
-Which location has the strongest potential for a new business branch based on foot traffic, competition, and customer demographics?
-
-The agent can then query BigQuery, validate the area using Google Maps, and provide a recommendation.
-
-## Example Questions
-
-You can test the agent using questions such as:
-
-Which area has the highest potential for business expansion?
-Analyze the competition around the recommended location.
-Which location has the best combination of high foot traffic and low competition?
-Can you compare the top three possible expansion areas?
-What business recommendation can be made based on the available data?
-
-## Setup Instructions
-1. Clone the Repository
+### 2. Clone Repository & Setup Virtual Environment
+```bash
 git clone https://github.com/Underag3/AI-Powered-Location-Intelligence-Agent-for-Business-Expansion-Analysis.git
 cd AI-Powered-Location-Intelligence-Agent-for-Business-Expansion-Analysis
-2. Create a Virtual Environment
-python -m venv .venv
 
-Activate the virtual environment:
+# Create virtual environment and install dependencies
+uv venv --python 3.13 .venv
+uv pip install -r requirements.txt --python .venv/Scripts/python.exe
+```
 
-For Windows:
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+cp .env.example .env
+```
+Edit `.env` and fill in your free Google AI Studio API key:
+```env
+GOOGLE_API_KEY=AIzaSy...
+GOOGLE_CLOUD_PROJECT=mcp1234567
+MODEL_NAME=gemini-3.8-flash
+OSM_MCP_COMMAND=uvx
+```
 
-.venv\Scripts\activate
+### 4. Load Data into BigQuery Sandbox
+Run the sandbox loader script to create dataset `mcp_bakery` and load the 4 tables directly without Cloud Storage buckets:
+- **Python (Cross-platform)**:
+  ```bash
+  .venv/Scripts/python setup/load_data_sandbox.py
+  ```
+- **Windows PowerShell**:
+  ```powershell
+  .\setup\load_data_sandbox.ps1
+  ```
+- **Linux / macOS**:
+  ```bash
+  bash setup/load_data_sandbox.sh
+  ```
 
-For macOS or Linux:
+Verified row count:
+* `demographics`: **305 rows**
+* `foot_traffic`: **915 rows**
+* `bakery_prices`: **50 rows**
+* `sales_history_weekly`: **936 rows**
 
-source .venv/bin/activate
-3. Install Dependencies
-pip install -r requirements.txt
+### 5. Run the Agent
+From the `adk_agent/` directory:
+- **Web UI Mode**:
+  ```bash
+  adk web
+  ```
+  Open the local URL displayed in the terminal (e.g., `http://127.0.0.1:8000`).
+- **CLI Direct Query Mode**:
+  ```bash
+  adk run mcp_bakery_app "Berapa populasi kode pos 90001?"
+  ```
 
-Recommended requirements.txt:
+---
 
-google-adk==1.28.0
-python-dotenv
-google-auth
-google-cloud-bigquery
-pandas
-numpy
-4. Configure Environment Variables
+## 📈 Evaluation & Ground Truth Benchmark
 
-Create a .env file in the project root.
+All questions below have been mathematically verified directly against the underlying dataset and deterministic engine:
 
-GOOGLE_GENAI_USE_VERTEXAI=1
-GOOGLE_CLOUD_PROJECT=your_google_cloud_project_id
-GOOGLE_CLOUD_LOCATION=global
-MAPS_API_KEY=your_google_maps_api_key
+| # | Question | Ground Truth / Target Answer | Verified Source |
+|---|---|---|---|
+| **Q1** | Berapa populasi kode pos 90001? | **33.626 jiwa** | `demographics.csv` |
+| **Q2** | Kode pos mana yang skor foot traffic malam harinya (evening) paling tinggi, dan berapa skornya? | **91723 — 55,0** | `foot_traffic.csv` |
+| **Q3** | Berapa rata-rata harga Sourdough Loaf di wilayah Los Angeles Metro? | **$11,25** | `bakery_prices.csv` |
+| **Q4** | Berapa total pendapatan cabang Downtown LA dari seluruh data penjualan? | **$502.166,75** (312 minggu) | `sales_history_weekly.csv` |
+| **Q5** | Kode pos mana yang paling berpotensi untuk cabang baru? Sebutkan 5 teratas beserta skornya. | **Tabel Acuan Q5 (di bawah)** | `scoring.rank_locations(5)` |
+| **Q6** | Kode pos mana dengan persentase lulusan sarjana tertinggi? | **90402 (Santa Monica) — 95,0%** | `demographics.csv` |
+| **Q7** | Toko roti apa saja yang ada di sekitar Santa Monica? | Daftar nama tempat nyata | OpenStreetMap (`find_nearby_places`) |
+| **Q8** | Bandingkan tiga kawasan teratas untuk cabang baru. | Rincian skor komponen 91301 vs 91011 vs 91108 | `scoring.py` |
+| **Q9** | Kenapa 91301 peringkatnya di atas 90265? | Skor pasar 94,88 vs 69,88; total 91,91 vs 86,32 | `scoring.py` |
+| **Q10** | Berapa jarak/rute dari Downtown Los Angeles ke Agoura Hills? | Jarak dan estimasi rute nyata | OpenStreetMap (`get_route_directions`) |
 
-Do not upload the .env file to GitHub.
+### Benchmark Output: Top 5 Location Ranking (Q5)
+```json
+{
+  "weights": { "traffic": 0.4, "market": 0.35, "purchasing": 0.25 },
+  "count": 5,
+  "locations": [
+    {
+      "rank": 1,
+      "zip_code": "91301",
+      "neighborhood": "Agoura Hills",
+      "city": "Los Angeles",
+      "total_score": 91.91,
+      "traffic_score": 88.53,
+      "market_score": 94.88,
+      "purchasing_score": 93.18
+    },
+    {
+      "rank": 2,
+      "zip_code": "91011",
+      "neighborhood": "La Cañada Flintridge",
+      "city": "Los Angeles",
+      "total_score": 91.05,
+      "traffic_score": 86.62,
+      "market_score": 89.71,
+      "purchasing_score": 100.00
+    },
+    {
+      "rank": 3,
+      "zip_code": "91108",
+      "neighborhood": "San Marino",
+      "city": "Los Angeles",
+      "total_score": 90.81,
+      "traffic_score": 100.00,
+      "market_score": 73.76,
+      "purchasing_score": 100.00
+    },
+    {
+      "rank": 4,
+      "zip_code": "91302",
+      "neighborhood": "Calabasas",
+      "city": "Los Angeles",
+      "total_score": 87.07,
+      "traffic_score": 77.94,
+      "market_score": 91.80,
+      "purchasing_score": 95.06
+    },
+    {
+      "rank": 5,
+      "zip_code": "90265",
+      "neighborhood": "Malibu",
+      "city": "Los Angeles",
+      "total_score": 86.32,
+      "traffic_score": 92.16,
+      "market_score": 69.88,
+      "purchasing_score": 100.00
+    }
+  ]
+}
+```
 
-You can also provide an example file named .env.example:
+---
 
-GOOGLE_GENAI_USE_VERTEXAI=1
-GOOGLE_CLOUD_PROJECT=your_project_id_here
-GOOGLE_CLOUD_LOCATION=global
-MAPS_API_KEY=your_google_maps_api_key_here
-5. Authenticate Google Cloud
+## ⚠️ Known Limitations & Operational Notes
 
-Make sure you are authenticated with Google Cloud:
+1. **BigQuery Sandbox 60-Day Table TTL**:  
+   Tables created under BigQuery Sandbox automatically expire after 60 days. If tables expire, simply re-run `python setup/load_data_sandbox.py` to restore all 4 tables in seconds.
+2. **OAuth Token Lifecycle**:  
+   Google OAuth tokens refreshed via Application Default Credentials (ADC) last approximately 1 hour. If a long-running `adk web` session encounters an authentication error, restart the server to refresh credentials.
+3. **OpenStreetMap Coverage vs. Google Maps**:  
+   OpenStreetMap (OSM) relies on community contributions. While rich in urban POIs and street geometry, business categorization in certain suburban areas may differ from proprietary commercial APIs like Google Places.
 
-gcloud auth application-default login
+---
 
-Set your Google Cloud project:
+## 📜 Attribution
 
-gcloud config set project your_google_cloud_project_id
-6. Prepare BigQuery Data
+This project is adapted and modified from Google's codelab:
+* **Google Codelab**: *Build a Location Intelligence ADK Agent with MCP servers for BigQuery and Google Maps*
+* **Google MCP Repository**: [https://github.com/google/mcp](https://github.com/google/mcp)
 
-This project expects business-related data to be available in BigQuery.
+The original codelab content is licensed under the **Creative Commons Attribution 4.0 License**.  
+The original code samples are licensed under the **Apache License 2.0**.
 
-Example tables may include:
+This repository re-engineers the original concept for standalone portfolio, zero-cost, and educational purposes—including the elimination of cloud billing requirements, replacement with OpenStreetMap MCP, addition of deterministic mathematical ranking logic, and resilient multi-model failover mechanisms.
 
-Table	Description
-demographics	Area-level demographic information
-foot_traffic	Foot traffic data by area or time period
-sales_history_weekly	Historical weekly sales data
-bakery_prices	Product pricing data
+---
 
-If you use your own business use case, you can replace these tables with your own dataset, such as:
+## 📄 License
 
-Table	Description
-area_demographics	Population, age group, income level, and education data
-poi_places	Nearby universities, offices, cafés, or business facilities
-venue_options	Possible business or event locations
-event_history	Historical business or event performance data
-7. Run the ADK Web App
+This project includes code and concepts adapted from Google MCP examples licensed under the **Apache License 2.0**. Please refer to the original Google MCP repository for upstream terms.
 
-From the project directory, run:
+---
 
-adk web
+## 👨‍💻 Author
 
-Then open the local URL provided by ADK in your browser.
-
-Environment Variables
-Variable	Description
-GOOGLE_GENAI_USE_VERTEXAI	Enables Vertex AI usage
-GOOGLE_CLOUD_PROJECT	Your Google Cloud project ID
-GOOGLE_CLOUD_LOCATION	Google Cloud region or location
-MAPS_API_KEY	Google Maps API key
-Important Security Notes
-
-Do not upload the following files or credentials to GitHub:
-
-.env
-Google Maps API key
-Google Cloud credential JSON files
-OAuth tokens
-Service account keys
-Billing-related credentials
-
-Make sure these files are included in .gitignore.
-
-Current Limitations
-
-This project is intended as a portfolio and educational implementation. Some limitations include:
-
-The sample business data may be synthetic or simplified.
-The recommendation quality depends on the quality of the input data.
-Google Maps API usage may require billing to be enabled.
-BigQuery queries may generate cloud usage costs.
-The agent still requires careful prompt and tool design to avoid inaccurate recommendations.
-Future Improvements
-
-Possible improvements for this project:
-
-Replace sample data with real public datasets.
-Add synthetic data generation scripts.
-Add dashboard visualizations for location comparison.
-Add evaluation metrics for recommendation quality.
-Support Indonesian city-level business expansion use cases.
-Add Streamlit or web-based frontend.
-Add sample screenshots of agent responses.
-Add automated data pipeline for BigQuery ingestion.
-Add clearer business scoring logic for location ranking.
-Portfolio Value
-
-This project demonstrates the ability to build an AI-powered data application that connects reasoning models with real-world tools. It combines AI agent development, cloud data analytics, and location intelligence into one practical business use case.
-
-Key skills demonstrated:
-
-Building an AI agent with Google ADK
-Connecting external tools using MCP
-Querying structured data from BigQuery
-Using Google Maps for real-world location analysis
-Designing data-driven business recommendations
-Managing environment variables and cloud-based configuration
-Attribution
-
-This project is adapted from Google's codelab:
-
-Build a Location Intelligence ADK Agent with MCP servers for BigQuery and Google Maps
-
-Original resources:
-
-Google Codelab: Build a Location Intelligence ADK Agent with MCP servers for BigQuery and Google Maps
-Google MCP Repository: https://github.com/google/mcp
-
-The original codelab content is licensed under the Creative Commons Attribution 4.0 License.
-The original code samples are licensed under the Apache License 2.0.
-
-This repository modifies and adapts the original concept for portfolio and educational purposes, including changes to the repository structure, documentation, and business expansion analysis framing.
-
-License
-
-This project includes code and concepts adapted from Google MCP examples.
-If this repository contains modified code from the original Google MCP repository, it should follow the Apache License 2.0.
-
-Please refer to the original license from the Google MCP repository for more details.
-
-Author
-
-Mohammad Tyas Subianto
-GitHub: Underag3
+**Mohammad Tyas Subianto**  
+* GitHub: [@Underag3](https://github.com/Underag3)
