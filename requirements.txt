@@ -1,3 +1,10 @@
+google-adk
+google-genai
+python-dotenv
+google-auth
+google-cloud-bigquery
 pandas
 numpy
-google-cloud-bigquery
+pyarrow
+db-dtypes
+mcp

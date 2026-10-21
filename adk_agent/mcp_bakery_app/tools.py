@@ -1,51 +1,54 @@
 import os
+
 import dotenv
 import google.auth
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
-from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams 
+import google.auth.transport.requests
+from google.adk.tools.mcp_tool.mcp_toolset import (
+    McpToolset,
+    StdioConnectionParams,
+    StreamableHTTPConnectionParams,
+)
+from mcp import StdioServerParameters
 
-MAPS_MCP_URL = "https://mapstools.googleapis.com/mcp" 
-BIGQUERY_MCP_URL = "https://bigquery.googleapis.com/mcp" 
-
-def get_maps_mcp_toolset():
-    dotenv.load_dotenv()
-    maps_api_key = os.getenv('MAPS_API_KEY', 'no_api_found')
-    
-    tools = MCPToolset(
-        connection_params=StreamableHTTPConnectionParams(
-            url=MAPS_MCP_URL,
-            headers={    
-                "X-Goog-Api-Key": maps_api_key
-            },
-            timeout=30.0,          
-            sse_read_timeout=300.0
-        )
-    )
-    print("MCP Toolset configured for Streamable HTTP connection.")
-    return tools
+BIGQUERY_MCP_URL = "https://bigquery.googleapis.com/mcp"
 
 
-def get_bigquery_mcp_toolset():   
-        
+def get_bigquery_mcp_toolset():
+    """Toolset BigQuery MCP resmi (remote). Autentikasi OAuth dari ADC lokal.
+
+    Token diambil sekali saat agent menyala dan berlaku ±1 jam; bila query
+    mulai gagal dengan error autentikasi setelah agent lama menyala,
+    mulai ulang `adk web` untuk menyegarkan token.
+    """
     credentials, project_id = google.auth.default(
-            scopes=["https://www.googleapis.com/auth/bigquery"]
+        scopes=["https://www.googleapis.com/auth/bigquery"]
     )
-
     credentials.refresh(google.auth.transport.requests.Request())
-    oauth_token = credentials.token
-        
-    HEADERS_WITH_OAUTH = {
-        "Authorization": f"Bearer {oauth_token}",
-        "x-goog-user-project": project_id
+    headers = {
+        "Authorization": f"Bearer {credentials.token}",
+        "x-goog-user-project": project_id,
     }
-
-    tools = MCPToolset(
+    return McpToolset(
         connection_params=StreamableHTTPConnectionParams(
             url=BIGQUERY_MCP_URL,
-            headers=HEADERS_WITH_OAUTH,
-            timeout=30.0,          
-            sse_read_timeout=300.0
+            headers=headers,
+            timeout=30.0,
+            sse_read_timeout=300.0,
         )
     )
-    print("MCP Toolset configured for Streamable HTTP connection.")
-    return tools
+
+
+def get_osm_mcp_toolset():
+    """Toolset OpenStreetMap MCP (lokal, stdio). Tanpa API key dan tanpa billing.
+
+    Bawaan: server dijalankan lewat `uvx --with "mcp<2" osm-mcp-server`.
+    Bila `uvx` tidak tersedia: `pip install osm-mcp-server`, lalu set
+    OSM_MCP_COMMAND=osm-mcp-server di .env.
+    """
+    command = os.getenv("OSM_MCP_COMMAND", "uvx")
+    args = ["--with", "mcp<2", "osm-mcp-server"] if command == "uvx" else []
+    return McpToolset(
+        connection_params=StdioConnectionParams(
+            server_params=StdioServerParameters(command=command, args=args)
+        )
+    )
