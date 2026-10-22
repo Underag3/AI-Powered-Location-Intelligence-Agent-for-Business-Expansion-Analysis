@@ -116,7 +116,7 @@ $$\text{Total Score} = 0.40 \times \text{Traffic Score} + 0.35 \times \text{Mark
    $$\text{purchasing\_raw} = \text{bachelors\_degree\_pct}$$
    Percentage of population aged 25+ with a bachelor's degree or higher (proxy for artisanal bakery purchasing power), scaled via Min-Max ($0 - 100$).
 4. **Competitor Handling**:
-   Competitor pricing data is aggregated at the regional level (LA Metro, Bay Area), not by physical radius. Therefore, competitor presence is **excluded from the numeric formula** and validated separately via OpenStreetMap MCP (`find_nearby_places`).
+   Competitor pricing data is aggregated at the regional level (Los Angeles Metro, SF Bay Area, San Diego), not by physical radius. Therefore, competitor presence is **excluded from the numeric formula** and validated separately via OpenStreetMap MCP (`find_nearby_places`).
 
 ---
 
